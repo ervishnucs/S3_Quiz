@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quiz App</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(to right, #ff9a9e, #fad0c4);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .container {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        width: 500px;
+        text-align: center;
+        overflow-y: auto;
+        max-height: 90vh;
+      }
+      .start-btn,
+      .restart-btn {
+        background: linear-gradient(to right, #ff758c, #ff7eb3);
+        border: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+      .start-btn:hover,
+      .restart-btn:hover {
+        transform: scale(1.05);
+        background: linear-gradient(to right, #ff416c, #ff4b2b);
+      }
+      .hidden {
+        display: none;
+      }
+      .progress-bar-container {
+        width: 100%;
+        background: #e0e0e0;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 10px;
+      }
+      .progress-bar {
+        height: 10px;
+        width: 0%;
+        background: linear-gradient(to right, #ff512f, #dd2476);
+        transition: width 0.3s;
+      }
+      .option {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 6px;
+        border: none;
+        background: linear-gradient(to right, #56ccf2, #2f80ed);
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+      .option:hover {
+        background: linear-gradient(to right, #2f80ed, #1c63b8);
+        transform: scale(1.05);
+      }
+      .timer {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        margin-top: 10px;
+      }
+      .correct-answer {
+        color: green;
+        font-weight: bold;
+      }
+      .wrong-answer {
+        color: red;
+        font-weight: bold;
+      }
+      .question-review {
+        text-align: left;
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 8px;
+        background: #f7f7f7;
+      }
+      .question-review p {
+        margin: 5px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <button id="startQuiz" class="start-btn">Start Quiz</button>
+
+      <div id="quizContainer" class="hidden">
+        <h2 id="questionBox">Loading question...</h2>
+        <div id="optionsContainer"></div>
+        <p id="progressText">Attempted: 0 / 20</p>
+        <div class="progress-bar-container">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+        <p class="timer">Time Left: <span id="timer">10:00</span></p>
+      </div>
+
+      <div id="scoreContainer" class="hidden">
+        <h2 id="finalScore">Your Score: 0 / 20</h2>
+        <p id="attemptedCount"></p>
+        <div id="reviewAnswers"></div>
+        <button id="restartQuiz" class="restart-btn">Restart Quiz</button>
+      </div>
+    </div>
+
+    <script>
+      let questions = [];
+      let currentQuestionIndex = 0;
+      let score = 0;
+      let attemptedQuestions = 0;
+      const maxQuestions = 20;
+      let timer;
+      let timeLeft = 600; // 10 minutes
+      let userAnswers = [];
+
+      document.getElementById("startQuiz").addEventListener("click", startQuiz);
+      document
+        .getElementById("restartQuiz")
+        .addEventListener("click", restartQuiz);
+
+      fetch("question.json")
+        .then((response) => response.json())
+        .then((data) => {
+          questions = shuffleArray(data.slice(0, maxQuestions));
+        })
+        .catch((error) => console.error("Error loading questions:", error));
+
+      function startQuiz() {
+        document.getElementById("startQuiz").classList.add("hidden");
+        document.getElementById("quizContainer").classList.remove("hidden");
+        startTimer();
+        loadQuestion();
+      }
+
+      function loadQuestion() {
+        if (
+          currentQuestionIndex >= maxQuestions ||
+          currentQuestionIndex >= questions.length
+        ) {
+          showFinalScore();
+          return;
+        }
+
+        const questionObj = questions[currentQuestionIndex];
+        document.getElementById("questionBox").innerText = `Q${
+          currentQuestionIndex + 1
+        }: ${questionObj.question}`;
+
+        const optionsElement = document.getElementById("optionsContainer");
+        optionsElement.innerHTML = "";
+        shuffleArray(questionObj.options).forEach((option) => {
+          const button = document.createElement("button");
+          button.classList.add("option");
+          button.innerText = option;
+          button.onclick = () => selectAnswer(option);
+          optionsElement.appendChild(button);
+        });
+
+        document.getElementById(
+          "progressText"
+        ).innerText = `Attempted: ${attemptedQuestions} / ${maxQuestions}`;
+        document.getElementById("progressBar").style.width = `${
+          ((currentQuestionIndex + 1) / maxQuestions) * 100
+        }%`;
+      }
+
+      function selectAnswer(selectedOption) {
+        const correctAnswer = questions[currentQuestionIndex].answer;
+        userAnswers.push({
+          question: questions[currentQuestionIndex].question,
+          selected: selectedOption,
+          correct: correctAnswer,
+        });
+
+        attemptedQuestions++;
+        if (selectedOption === correctAnswer) {
+          score++;
+        }
+
+        currentQuestionIndex++;
+        document.getElementById(
+          "progressText"
+        ).innerText = `Attempted: ${attemptedQuestions} / ${maxQuestions}`;
+        loadQuestion();
+      }
+
+      function showFinalScore() {
+        document.getElementById("quizContainer").classList.add("hidden");
+        document.getElementById("scoreContainer").classList.remove("hidden");
+        document.getElementById(
+          "finalScore"
+        ).innerText = `Your Score: ${score} / ${maxQuestions}`;
+        document.getElementById(
+          "attemptedCount"
+        ).innerText = `Total Attempted Questions: ${attemptedQuestions} / ${maxQuestions}`;
+        clearInterval(timer);
+
+        let reviewHtml = "<h3>Review Your Answers:</h3>";
+        userAnswers.forEach((ans, index) => {
+          const isCorrect = ans.selected === ans.correct;
+          reviewHtml += `
+                    <div class="question-review">
+                        <p><strong>Q${index + 1}:</strong> ${ans.question}</p>
+                        <p>Your Answer: <span class="${
+                          isCorrect ? "correct-answer" : "wrong-answer"
+                        }">${ans.selected} ${isCorrect ? "✔️" : "❌"}</span></p>
+                        <p>Correct Answer: <span class="correct-answer">${
+                          ans.correct
+                        } ✔️</span></p>
+                    </div>
+                `;
+        });
+
+        document.getElementById("reviewAnswers").innerHTML = reviewHtml;
+      }
+
+      function restartQuiz() {
+        currentQuestionIndex = 0;
+        score = 0;
+        attemptedQuestions = 0;
+        timeLeft = 600;
+        userAnswers = [];
+        questions = shuffleArray(questions);
+        document.getElementById("scoreContainer").classList.add("hidden");
+        document.getElementById("startQuiz").classList.remove("hidden");
+      }
+
+      function shuffleArray(array) {
+        return array.sort(() => Math.random() - 0.5);
+      }
+
+      function startTimer() {
+        timer = setInterval(() => {
+          if (timeLeft <= 0) {
+            clearInterval(timer);
+            showFinalScore();
+          }
+          timeLeft--;
+        }, 1000);
+      }
+    </script>
+  </body>
+</html>
