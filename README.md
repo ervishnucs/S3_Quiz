@@ -18,7 +18,7 @@ This repository contains the necessary files and instructions to host a static w
 4. **Set up public access permissions** for the bucket.  
 5. (Optional) **Connect a custom domain** using Route 53.  
 
-📺 [How to Host a Static Website on AWS S3](https://youtu.be/hGHJdnwV7QU)
+📺 [How to Host a Static Website on AWS S3](https://youtu.be/IzzCyNO17zA)
 
 ## 📂 Files Included  
 - `index.html` - Main page of the website  
